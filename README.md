@@ -18,9 +18,9 @@
 
 ## The Problem
 
-LLMs hallucinate. RAG pipelines help, but most implementations are shallow — single-source retrieval, no verification, no transparency into what the model actually grounded its answer on.
+LLMs hallucinate. RAG pipelines help, but most implementations are shallow - single-source retrieval, no verification, no transparency into what the model actually grounded its answer on.
 
-**ATLAS** is a research agent that doesn't just retrieve-and-generate. It **plans** multi-step research strategies, **retrieves** from multiple sources simultaneously, **executes code** for data analysis, and then **audits its own output** — scoring every claim against retrieved evidence using Natural Language Inference and producing interpretable attribution trails via SHAP.
+**ATLAS** is a research agent that doesn't just retrieve-and-generate. It **plans** multi-step research strategies, **retrieves** from multiple sources simultaneously, **executes code** for data analysis, and then **audits its own output** - scoring every claim against retrieved evidence using Natural Language Inference and producing interpretable attribution trails via SHAP.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ Combines dense retrieval (sentence-transformers embeddings + ChromaDB) with spar
 Unlike binary "hallucinated or not" approaches, ATLAS extracts atomic claims from generated text and scores each independently against retrieved evidence using a Natural Language Inference model (BART-MNLI). Claims below a configurable threshold are flagged with the specific evidence gap identified.
 
 ### SHAP-Based Evidence Attribution
-Uses SHAP (SHapley Additive exPlanations) on the cross-encoder to produce interpretable attribution maps — showing exactly which retrieved chunk influenced each generated claim. This provides an auditable evidence trail from source → retrieval → generation.
+Uses SHAP (SHapley Additive exPlanations) on the cross-encoder to produce interpretable attribution maps - showing exactly which retrieved chunk influenced each generated claim. This provides an auditable evidence trail from source → retrieval -> generation.
 
 ### Agentic DAG-Based Planning
 The planner decomposes complex research questions into a Directed Acyclic Graph of sub-tasks with explicit dependencies. Tasks without dependencies execute in parallel, while dependent tasks wait for upstream results. Topological sorting ensures correct execution order.
