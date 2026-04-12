@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Linting
+.ruff_cache/
+.mypy_cache/
+
+# Data (keep structure, ignore large files)
+data/eval/*.pdf
+data/eval/*.json
+!data/eval/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Docker
+chroma_data/
+
+# OS
+.DS_Store
+Thumbs.db
