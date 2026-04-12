@@ -65,18 +65,25 @@ async def ingest_document(request: IngestRequest):
 
 @router.post("/retrieve", response_model=RetrievalResponse)
 async def retrieve_chunks(request: RetrievalRequest):
-    """Retrieve relevant chunks for a query."""
+    """Retrieve relevant chunks for a query with optional re-ranking."""
     try:
         retriever = get_retriever()
         results = retriever.retrieve(
             query=request.query,
             top_k=request.top_k,
             method=request.method,
+            rerank=request.rerank,
         )
-        log.info("retrieval_complete", query=request.query, num_results=len(results))
+        log.info(
+            "retrieval_complete",
+            query=request.query,
+            num_results=len(results),
+            reranked=request.rerank,
+        )
         return RetrievalResponse(
             query=request.query,
             method=request.method,
+            reranked=request.rerank,
             results=results,
             num_results=len(results),
         )

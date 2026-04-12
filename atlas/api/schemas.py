@@ -25,6 +25,7 @@ class RetrievalRequest(BaseModel):
     query: str = Field(..., description="Search query")
     top_k: int = Field(default=5, ge=1, le=20)
     method: str = Field(default="hybrid", pattern="^(dense|sparse|hybrid)$")
+    rerank: bool = Field(default=True, description="Apply cross-encoder re-ranking")
 
 
 class ChunkResult(BaseModel):
@@ -40,6 +41,7 @@ class RetrievalResponse(BaseModel):
     """Response containing retrieved chunks."""
     query: str
     method: str
+    reranked: bool
     results: list[ChunkResult]
     num_results: int
 

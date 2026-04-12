@@ -1,7 +1,7 @@
-"""Hybrid retrieval: Dense + Sparse with Reciprocal Rank Fusion (RRF).
+"""Hybrid retrieval: Dense + Sparse with Reciprocal Rank Fusion (RRF) + Re-ranking.
 
 Combines semantic (dense) and keyword (sparse/BM25) retrieval using
-Reciprocal Rank Fusion to get the best of both worlds.
+Reciprocal Rank Fusion, then optionally re-ranks with a cross-encoder.
 
 RRF formula: score(d) = Σ 1 / (k + rank_i(d))
 where k is a constant (default 60) and rank_i is the rank from retriever i.
@@ -10,46 +10,64 @@ where k is a constant (default 60) and rank_i is the rank from retriever i.
 from atlas.api.schemas import ChunkResult
 from atlas.retriever.dense import DenseIndex
 from atlas.retriever.sparse import SparseIndex
+from atlas.retriever.reranker import Reranker
 from atlas.observability.logger import get_logger
 
 log = get_logger(__name__)
 
 
 class HybridRetriever:
-    """Hybrid retriever combining dense and sparse search with RRF."""
+    """Hybrid retriever combining dense and sparse search with RRF + re-ranking."""
 
-    def __init__(self, rrf_k: int = 60):
+    def __init__(self, rrf_k: int = 60, use_reranker: bool = True):
         """
         Args:
             rrf_k: RRF constant. Higher values reduce the impact of rank position.
                    Standard value is 60 (from the original RRF paper).
+            use_reranker: Whether to load and use the cross-encoder re-ranker.
         """
         self.dense_index = DenseIndex()
         self.sparse_index = SparseIndex()
         self.rrf_k = rrf_k
+
+        # Lazy-load reranker (it takes a few seconds to load the model)
+        self._reranker: Reranker | None = None
+        self._use_reranker = use_reranker
+
+    @property
+    def reranker(self) -> Reranker:
+        """Lazy-load the re-ranker on first use."""
+        if self._reranker is None:
+            self._reranker = Reranker()
+        return self._reranker
 
     def retrieve(
         self,
         query: str,
         top_k: int = 5,
         method: str = "hybrid",
+        rerank: bool = True,
     ) -> list[ChunkResult]:
         """Retrieve relevant chunks using the specified method.
 
         Args:
             query: The search query.
-            top_k: Number of results to return.
+            top_k: Number of final results to return.
             method: One of "dense", "sparse", or "hybrid".
+            rerank: Whether to apply cross-encoder re-ranking.
 
         Returns:
             List of ChunkResult sorted by relevance.
         """
+        # Fetch more candidates when re-ranking (re-ranker picks the best from a larger pool)
+        candidate_k = top_k * 4 if rerank else top_k
+
         if method == "dense":
-            raw_results = self.dense_index.search(query, top_k=top_k)
+            raw_results = self.dense_index.search(query, top_k=candidate_k)
         elif method == "sparse":
-            raw_results = self.sparse_index.search(query, top_k=top_k)
+            raw_results = self.sparse_index.search(query, top_k=candidate_k)
         elif method == "hybrid":
-            raw_results = self._hybrid_search(query, top_k=top_k)
+            raw_results = self._hybrid_search(query, top_k=candidate_k)
         else:
             raise ValueError(f"Unknown method: {method}. Use 'dense', 'sparse', or 'hybrid'.")
 
@@ -64,21 +82,34 @@ class HybridRetriever:
             for r in raw_results
         ]
 
-        log.info(
-            "retrieval_complete",
-            query=query[:80],
-            method=method,
-            num_results=len(results),
-        )
+        # Apply re-ranking if enabled
+        if rerank and self._use_reranker and results:
+            results = self.reranker.rerank(query=query, results=results, top_k=top_k)
+            log.info(
+                "retrieval_with_rerank",
+                query=query[:80],
+                method=method,
+                candidates=len(raw_results),
+                final=len(results),
+            )
+        else:
+            results = results[:top_k]
+            log.info(
+                "retrieval_no_rerank",
+                query=query[:80],
+                method=method,
+                num_results=len(results),
+            )
+
         return results
 
     def _hybrid_search(self, query: str, top_k: int = 5) -> list[dict]:
         """Run both dense and sparse search, fuse with RRF.
 
-        Fetches more candidates from each retriever than needed (2x top_k),
+        Fetches more candidates from each retriever than needed (3x top_k),
         then fuses and returns the top_k overall results.
         """
-        candidate_k = top_k * 3  # Fetch extra candidates for better fusion
+        candidate_k = top_k * 3
 
         dense_results = self.dense_index.search(query, top_k=candidate_k)
         sparse_results = self.sparse_index.search(query, top_k=candidate_k)
