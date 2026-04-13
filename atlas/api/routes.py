@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
+from atlas.agent.orchestrator import AgentOrchestrator
 from atlas.api.schemas import (
     IngestRequest,
     IngestResponse,
@@ -24,6 +25,7 @@ router = APIRouter()
 # Initialize components (lazy singletons)
 _ingestor: DocumentIngestor | None = None
 _retriever: HybridRetriever | None = None
+_agent: AgentOrchestrator | None = None
 
 
 def get_ingestor() -> DocumentIngestor:
@@ -38,6 +40,13 @@ def get_retriever() -> HybridRetriever:
     if _retriever is None:
         _retriever = HybridRetriever()
     return _retriever
+
+
+def get_agent() -> AgentOrchestrator:
+    global _agent
+    if _agent is None:
+        _agent = AgentOrchestrator()
+    return _agent
 
 
 @router.post("/ingest", response_model=IngestResponse)
@@ -57,7 +66,10 @@ async def ingest_document(request: IngestRequest):
         return IngestResponse(
             document_id=result["document_id"],
             num_chunks=result["num_chunks"],
-            message=f"Successfully ingested {file_path.name} into {result['num_chunks']} chunks",
+            message=(
+                f"Successfully ingested {file_path.name} "
+                f"into {result['num_chunks']} chunks"
+            ),
         )
     except Exception as e:
         log.error("ingest_failed", file=str(file_path), error=str(e))
@@ -95,16 +107,21 @@ async def retrieve_chunks(request: RetrievalRequest):
 
 @router.post("/research", response_model=ResearchResponse)
 async def run_research(request: ResearchRequest):
-    """Run the full research agent pipeline. (Stub — built in Week 4)"""
-    trace = trace_store.create(query=request.query)
-    return ResearchResponse(
-        trace_id=trace.trace_id,
-        query=request.query,
-        status="not_implemented",
-        report=None,
-        confidence=None,
-        sources=[],
-    )
+    """Run the full autonomous research agent pipeline."""
+    try:
+        agent = get_agent()
+        result = agent.run(query=request.query)
+        return ResearchResponse(
+            trace_id=result["trace_id"],
+            query=result["query"],
+            status="completed",
+            report=result["answer"],
+            confidence=None,  # Will be added with evaluator module
+            sources=result["sources"],
+        )
+    except Exception as e:
+        log.error("research_failed", query=request.query, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/traces")
