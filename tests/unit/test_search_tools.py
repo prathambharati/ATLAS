@@ -1,9 +1,7 @@
 """Tests for web search and arxiv tools."""
 
-import pytest
-
-from atlas.retriever.web_search import WebSearchTool
 from atlas.retriever.arxiv_search import ArxivSearchTool
+from atlas.retriever.web_search import WebSearchTool
 
 
 class TestWebSearchTool:

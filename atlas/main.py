@@ -4,8 +4,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from atlas.config import settings
 from atlas.api.routes import router
+from atlas.config import settings
 from atlas.observability.logger import setup_logging
 
 

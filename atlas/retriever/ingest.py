@@ -5,16 +5,15 @@ in both ChromaDB (dense) and a BM25 index (sparse).
 """
 
 import hashlib
-import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
 import pdfplumber
 
 from atlas.config import settings
+from atlas.observability.logger import get_logger
 from atlas.retriever.dense import DenseIndex
 from atlas.retriever.sparse import SparseIndex
-from atlas.observability.logger import get_logger
 
 log = get_logger(__name__)
 

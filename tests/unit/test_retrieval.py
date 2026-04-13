@@ -1,7 +1,5 @@
 """Tests for dense and sparse retrieval modules."""
 
-import pytest
-
 from atlas.retriever.ingest import Chunk
 from atlas.retriever.sparse import SparseIndex
 
@@ -27,13 +25,15 @@ class TestSparseIndex:
     def test_add_and_search(self):
         """Should return relevant results for a matching query."""
         index = SparseIndex()
-        chunks = _make_chunks([
-            "Machine learning is a subset of artificial intelligence.",
-            "Neural networks are inspired by biological neurons.",
-            "The weather today is sunny and warm.",
-            "Deep learning uses multiple layers of neural networks.",
-            "Cooking pasta requires boiling water and salt.",
-        ])
+        chunks = _make_chunks(
+            [
+                "Machine learning is a subset of artificial intelligence.",
+                "Neural networks are inspired by biological neurons.",
+                "The weather today is sunny and warm.",
+                "Deep learning uses multiple layers of neural networks.",
+                "Cooking pasta requires boiling water and salt.",
+            ]
+        )
         index.add_chunks(chunks)
 
         results = index.search("neural networks deep learning", top_k=3)
@@ -74,10 +74,12 @@ class TestSparseIndex:
     def test_no_zero_score_results(self):
         """Should not return results with zero BM25 score."""
         index = SparseIndex()
-        chunks = _make_chunks([
-            "Quantum computing uses qubits.",
-            "Baking bread requires flour and yeast.",
-        ])
+        chunks = _make_chunks(
+            [
+                "Quantum computing uses qubits.",
+                "Baking bread requires flour and yeast.",
+            ]
+        )
         index.add_chunks(chunks)
 
         results = index.search("quantum qubits", top_k=5)
@@ -99,9 +101,6 @@ class TestHybridRRF:
 
     def test_rrf_score_calculation(self):
         """RRF should combine rankings from both retrievers."""
-        from atlas.retriever.hybrid import HybridRetriever
-
-        retriever = HybridRetriever(rrf_k=60)
 
         # Just verify the math: for k=60, rank 1 → 1/61, rank 2 → 1/62
         score_rank_1 = 1.0 / (60 + 1)

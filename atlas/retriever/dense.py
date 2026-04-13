@@ -124,13 +124,15 @@ class DenseIndex:
             distance = results["distances"][0][i]
             similarity = 1 - distance
 
-            output.append({
-                "chunk_id": chunk_id,
-                "text": results["documents"][0][i],
-                "score": round(similarity, 4),
-                "source": results["metadatas"][0][i].get("source", "unknown"),
-                "metadata": results["metadatas"][0][i],
-            })
+            output.append(
+                {
+                    "chunk_id": chunk_id,
+                    "text": results["documents"][0][i],
+                    "score": round(similarity, 4),
+                    "source": results["metadatas"][0][i].get("source", "unknown"),
+                    "metadata": results["metadatas"][0][i],
+                }
+            )
 
         return output
 

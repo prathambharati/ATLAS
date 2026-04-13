@@ -6,14 +6,14 @@ Stores traces in memory for now; can be extended to persist to DB or file.
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 from atlas.observability.logger import get_logger
 
 log = get_logger(__name__)
 
 
-class StepType(str, Enum):
+class StepType(StrEnum):
     LLM_CALL = "llm_call"
     RETRIEVAL = "retrieval"
     TOOL_USE = "tool_use"
@@ -101,9 +101,7 @@ class TraceStore:
         return self._traces.get(trace_id)
 
     def list_recent(self, n: int = 10) -> list[dict]:
-        sorted_traces = sorted(
-            self._traces.values(), key=lambda t: t.created_at, reverse=True
-        )
+        sorted_traces = sorted(self._traces.values(), key=lambda t: t.created_at, reverse=True)
         return [t.summary() for t in sorted_traces[:n]]
 
 

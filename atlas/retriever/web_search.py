@@ -69,13 +69,15 @@ class WebSearchTool:
 
             results = []
             for item in response.get("results", []):
-                results.append({
-                    "title": item.get("title", ""),
-                    "url": item.get("url", ""),
-                    "content": item.get("content", ""),
-                    "score": item.get("score", 0.0),
-                    "source": "web",
-                })
+                results.append(
+                    {
+                        "title": item.get("title", ""),
+                        "url": item.get("url", ""),
+                        "content": item.get("content", ""),
+                        "score": item.get("score", 0.0),
+                        "source": "web",
+                    }
+                )
 
             log.info(
                 "web_search_complete",
@@ -98,16 +100,18 @@ class WebSearchTool:
 
         chunks = []
         for i, result in enumerate(raw_results):
-            chunks.append({
-                "chunk_id": f"web_{i:04d}",
-                "text": f"{result['title']}\n\n{result['content']}",
-                "score": result.get("score", 0.0),
-                "source": result.get("url", "web"),
-                "metadata": {
-                    "source_type": "web",
-                    "title": result.get("title", ""),
-                    "url": result.get("url", ""),
-                },
-            })
+            chunks.append(
+                {
+                    "chunk_id": f"web_{i:04d}",
+                    "text": f"{result['title']}\n\n{result['content']}",
+                    "score": result.get("score", 0.0),
+                    "source": result.get("url", "web"),
+                    "metadata": {
+                        "source_type": "web",
+                        "title": result.get("title", ""),
+                        "url": result.get("url", ""),
+                    },
+                }
+            )
 
         return chunks

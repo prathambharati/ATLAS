@@ -75,17 +75,19 @@ class SparseIndex:
                 continue  # Skip zero-score results
 
             chunk = self._chunks[idx]
-            results.append({
-                "chunk_id": chunk.chunk_id,
-                "text": chunk.text,
-                "score": round(float(scores[idx]), 4),
-                "source": chunk.source,
-                "metadata": {
-                    "page_number": chunk.page_number,
-                    "chunk_index": chunk.chunk_index,
-                    **chunk.metadata,
-                },
-            })
+            results.append(
+                {
+                    "chunk_id": chunk.chunk_id,
+                    "text": chunk.text,
+                    "score": round(float(scores[idx]), 4),
+                    "source": chunk.source,
+                    "metadata": {
+                        "page_number": chunk.page_number,
+                        "chunk_index": chunk.chunk_index,
+                        **chunk.metadata,
+                    },
+                }
+            )
 
         return results
 

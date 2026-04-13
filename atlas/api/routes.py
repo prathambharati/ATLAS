@@ -1,20 +1,21 @@
 """API routes for ATLAS."""
 
-from fastapi import APIRouter, HTTPException
 from pathlib import Path
+
+from fastapi import APIRouter, HTTPException
 
 from atlas.api.schemas import (
     IngestRequest,
     IngestResponse,
-    RetrievalRequest,
-    RetrievalResponse,
     ResearchRequest,
     ResearchResponse,
+    RetrievalRequest,
+    RetrievalResponse,
 )
-from atlas.retriever.ingest import DocumentIngestor
-from atlas.retriever.hybrid import HybridRetriever
 from atlas.observability.logger import get_logger
 from atlas.observability.tracer import trace_store
+from atlas.retriever.hybrid import HybridRetriever
+from atlas.retriever.ingest import DocumentIngestor
 
 log = get_logger(__name__)
 

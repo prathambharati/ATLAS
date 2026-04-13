@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 from sentence_transformers import CrossEncoder
 
-from atlas.config import settings
 from atlas.observability.logger import get_logger
 
 if TYPE_CHECKING:
@@ -83,9 +82,7 @@ class Reranker:
         reranked = []
         for result, score in scored_results[:top_k]:
             # Create a new ChunkResult with the cross-encoder score
-            reranked.append(
-                result.model_copy(update={"score": round(float(score), 6)})
-            )
+            reranked.append(result.model_copy(update={"score": round(float(score), 6)}))
 
         log.info(
             "reranking_complete",

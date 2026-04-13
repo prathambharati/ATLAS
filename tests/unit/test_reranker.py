@@ -30,25 +30,29 @@ class TestReranker:
 
     def test_rerank_returns_correct_count(self):
         """Should return top_k results."""
-        chunks = _make_chunk_results([
-            "Machine learning is a subset of artificial intelligence.",
-            "The weather today is sunny and warm.",
-            "Deep neural networks use backpropagation.",
-            "Cooking pasta requires boiling water.",
-            "Transformers use self-attention mechanisms.",
-        ])
+        chunks = _make_chunk_results(
+            [
+                "Machine learning is a subset of artificial intelligence.",
+                "The weather today is sunny and warm.",
+                "Deep neural networks use backpropagation.",
+                "Cooking pasta requires boiling water.",
+                "Transformers use self-attention mechanisms.",
+            ]
+        )
         results = self.reranker.rerank("neural network architectures", chunks, top_k=3)
         assert len(results) == 3
 
     def test_rerank_improves_ordering(self):
         """Relevant chunks should be ranked higher than irrelevant ones."""
-        chunks = _make_chunk_results([
-            "The best recipe for chocolate cake involves cocoa powder.",
-            "Neural networks consist of layers of interconnected nodes.",
-            "My cat likes to sleep on the couch all day long.",
-            "Backpropagation computes gradients through the network.",
-            "The stock market closed higher today on tech gains.",
-        ])
+        chunks = _make_chunk_results(
+            [
+                "The best recipe for chocolate cake involves cocoa powder.",
+                "Neural networks consist of layers of interconnected nodes.",
+                "My cat likes to sleep on the couch all day long.",
+                "Backpropagation computes gradients through the network.",
+                "The stock market closed higher today on tech gains.",
+            ]
+        )
         results = self.reranker.rerank("how do neural networks learn", chunks, top_k=5)
 
         # The ML-related chunks should be in the top 2
@@ -69,11 +73,13 @@ class TestReranker:
 
     def test_rerank_top_k_none_returns_all(self):
         """When top_k is None, all results should be returned."""
-        chunks = _make_chunk_results([
-            "Text one.",
-            "Text two.",
-            "Text three.",
-        ])
+        chunks = _make_chunk_results(
+            [
+                "Text one.",
+                "Text two.",
+                "Text three.",
+            ]
+        )
         results = self.reranker.rerank("query", chunks, top_k=None)
         assert len(results) == 3
 

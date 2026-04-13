@@ -47,17 +47,19 @@ class ArxivSearchTool:
 
             results = []
             for paper in self._client.results(search):
-                results.append({
-                    "title": paper.title,
-                    "abstract": paper.summary,
-                    "authors": [a.name for a in paper.authors],
-                    "published": paper.published.isoformat() if paper.published else "",
-                    "updated": paper.updated.isoformat() if paper.updated else "",
-                    "arxiv_id": paper.entry_id.split("/")[-1],
-                    "pdf_url": paper.pdf_url,
-                    "categories": paper.categories,
-                    "source": "arxiv",
-                })
+                results.append(
+                    {
+                        "title": paper.title,
+                        "abstract": paper.summary,
+                        "authors": [a.name for a in paper.authors],
+                        "published": paper.published.isoformat() if paper.published else "",
+                        "updated": paper.updated.isoformat() if paper.updated else "",
+                        "arxiv_id": paper.entry_id.split("/")[-1],
+                        "pdf_url": paper.pdf_url,
+                        "categories": paper.categories,
+                        "source": "arxiv",
+                    }
+                )
 
             log.info(
                 "arxiv_search_complete",
@@ -86,19 +88,21 @@ class ArxivSearchTool:
 
             text = f"{paper['title']}\n\nAuthors: {authors_str}\n\n{paper['abstract']}"
 
-            chunks.append({
-                "chunk_id": f"arxiv_{paper['arxiv_id']}",
-                "text": text,
-                "score": 1.0 - (i * 0.05),  # Decreasing score by rank
-                "source": f"arxiv:{paper['arxiv_id']}",
-                "metadata": {
-                    "source_type": "arxiv",
-                    "title": paper["title"],
-                    "authors": paper["authors"],
-                    "pdf_url": paper["pdf_url"],
-                    "published": paper["published"],
-                    "arxiv_id": paper["arxiv_id"],
-                },
-            })
+            chunks.append(
+                {
+                    "chunk_id": f"arxiv_{paper['arxiv_id']}",
+                    "text": text,
+                    "score": 1.0 - (i * 0.05),  # Decreasing score by rank
+                    "source": f"arxiv:{paper['arxiv_id']}",
+                    "metadata": {
+                        "source_type": "arxiv",
+                        "title": paper["title"],
+                        "authors": paper["authors"],
+                        "pdf_url": paper["pdf_url"],
+                        "published": paper["published"],
+                        "arxiv_id": paper["arxiv_id"],
+                    },
+                }
+            )
 
         return chunks

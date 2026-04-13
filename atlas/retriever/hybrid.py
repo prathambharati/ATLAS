@@ -8,10 +8,10 @@ where k is a constant (default 60) and rank_i is the rank from retriever i.
 """
 
 from atlas.api.schemas import ChunkResult
-from atlas.retriever.dense import DenseIndex
-from atlas.retriever.sparse import SparseIndex
-from atlas.retriever.reranker import Reranker
 from atlas.observability.logger import get_logger
+from atlas.retriever.dense import DenseIndex
+from atlas.retriever.reranker import Reranker
+from atlas.retriever.sparse import SparseIndex
 
 log = get_logger(__name__)
 

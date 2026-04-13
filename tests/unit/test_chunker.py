@@ -1,7 +1,5 @@
 """Tests for the document chunker."""
 
-import pytest
-
 from atlas.retriever.ingest import RecursiveChunker
 
 
@@ -25,7 +23,10 @@ class TestRecursiveChunker:
 
     def test_paragraph_split(self):
         """Text with paragraph breaks should split on \\n\\n first."""
-        text = "First paragraph with enough text to exceed the chunk size limit we set.\n\nSecond paragraph also has enough text to be a meaningful standalone chunk on its own."
+        text = (
+            "First paragraph with enough text to exceed the chunk size limit we set."
+            "\n\nSecond paragraph also has enough text to be a meaningful standalone chunk."
+        )
         chunks = self.chunker.split(text)
         assert len(chunks) >= 2
         assert "First paragraph" in chunks[0]
