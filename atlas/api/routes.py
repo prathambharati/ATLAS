@@ -15,6 +15,7 @@ from atlas.api.schemas import (
 )
 from atlas.observability.logger import get_logger
 from atlas.observability.tracer import trace_store
+from atlas.report.generator import ReportGenerator
 from atlas.retriever.hybrid import HybridRetriever
 from atlas.retriever.ingest import DocumentIngestor
 
@@ -26,6 +27,7 @@ router = APIRouter()
 _ingestor: DocumentIngestor | None = None
 _retriever: HybridRetriever | None = None
 _agent: AgentOrchestrator | None = None
+_report_gen: ReportGenerator | None = None
 
 
 def get_ingestor() -> DocumentIngestor:
@@ -49,20 +51,35 @@ def get_agent() -> AgentOrchestrator:
     return _agent
 
 
+def get_report_generator() -> ReportGenerator:
+    global _report_gen
+    if _report_gen is None:
+        _report_gen = ReportGenerator()
+    return _report_gen
+
+
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_document(request: IngestRequest):
     """Ingest a PDF document into the vector store."""
     file_path = Path(request.file_path)
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+        raise HTTPException(
+            status_code=404, detail=f"File not found: {file_path}"
+        )
 
     if not file_path.suffix.lower() == ".pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+        raise HTTPException(
+            status_code=400, detail="Only PDF files are supported"
+        )
 
     try:
         ingestor = get_ingestor()
         result = ingestor.ingest(str(file_path), metadata=request.metadata)
-        log.info("document_ingested", file=str(file_path), chunks=result["num_chunks"])
+        log.info(
+            "document_ingested",
+            file=str(file_path),
+            chunks=result["num_chunks"],
+        )
         return IngestResponse(
             document_id=result["document_id"],
             num_chunks=result["num_chunks"],
@@ -107,16 +124,33 @@ async def retrieve_chunks(request: RetrievalRequest):
 
 @router.post("/research", response_model=ResearchResponse)
 async def run_research(request: ResearchRequest):
-    """Run the full autonomous research agent pipeline."""
+    """Run the full autonomous research agent pipeline.
+
+    1. Decomposes query into sub-tasks (DAG)
+    2. Executes each task with ReAct agent + tools
+    3. Generates structured report with citations
+    """
     try:
         agent = get_agent()
+        report_gen = get_report_generator()
+
+        # Run the agent
         result = agent.run(query=request.query)
+
+        # Generate structured report
+        report = report_gen.generate(
+            query=result["query"],
+            answer=result["answer"],
+            sources=result["sources"],
+            dag_summary=result.get("dag_summary"),
+        )
+
         return ResearchResponse(
             trace_id=result["trace_id"],
             query=result["query"],
             status="completed",
-            report=result["answer"],
-            confidence=None,  # Will be added with evaluator module
+            report=report,
+            confidence=None,
             sources=result["sources"],
         )
     except Exception as e:
