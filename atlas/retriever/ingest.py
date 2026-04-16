@@ -2,6 +2,11 @@
 
 Reads PDFs, splits into chunks, computes embeddings, and stores
 in both ChromaDB (dense) and a BM25 index (sparse).
+
+Improvements:
+- Layout-aware text extraction preserving table structure
+- Separate table extraction and formatting
+- Larger context windows around key data
 """
 
 import hashlib
@@ -31,11 +36,7 @@ class Chunk:
 
 
 class RecursiveChunker:
-    """Split text into overlapping chunks using recursive character splitting.
-
-    Tries to split on paragraph breaks first, then sentences, then words,
-    preserving semantic coherence within each chunk.
-    """
+    """Split text into overlapping chunks using recursive character splitting."""
 
     def __init__(
         self,
@@ -50,23 +51,18 @@ class RecursiveChunker:
     def split(self, text: str) -> list[str]:
         """Split text into chunks recursively."""
         chunks = self._recursive_split(text, self.separators)
-        # Merge small chunks and add overlap
         return self._merge_with_overlap(chunks)
 
     def _recursive_split(self, text: str, separators: list[str]) -> list[str]:
-        """Try each separator in order until chunks are small enough."""
         if not text:
             return []
-
         if len(text) <= self.chunk_size:
             return [text.strip()] if text.strip() else []
 
-        # Try the first separator
         sep = separators[0]
         remaining_seps = separators[1:] if len(separators) > 1 else separators
 
         if sep == "":
-            # Hard split by character count (last resort)
             return [
                 text[i : i + self.chunk_size].strip()
                 for i in range(0, len(text), self.chunk_size)
@@ -84,9 +80,10 @@ class RecursiveChunker:
             else:
                 if current:
                     result.append(current.strip())
-                # If the single piece is too big, recurse with next separator
                 if len(piece) > self.chunk_size:
-                    result.extend(self._recursive_split(piece, remaining_seps))
+                    result.extend(
+                        self._recursive_split(piece, remaining_seps)
+                    )
                 else:
                     current = piece
 
@@ -96,15 +93,17 @@ class RecursiveChunker:
         return result
 
     def _merge_with_overlap(self, chunks: list[str]) -> list[str]:
-        """Add overlap between consecutive chunks for context continuity."""
         if not chunks or self.chunk_overlap == 0:
             return chunks
 
         merged = [chunks[0]]
         for i in range(1, len(chunks)):
             prev = chunks[i - 1]
-            # Take the last `chunk_overlap` characters from previous chunk
-            overlap = prev[-self.chunk_overlap :] if len(prev) > self.chunk_overlap else prev
+            overlap = (
+                prev[-self.chunk_overlap :]
+                if len(prev) > self.chunk_overlap
+                else prev
+            )
             merged.append(overlap + " " + chunks[i])
 
         return merged
@@ -120,23 +119,15 @@ class DocumentIngestor:
         self._ingested: dict[str, list[Chunk]] = {}
 
     def ingest(self, file_path: str, metadata: dict | None = None) -> dict:
-        """Ingest a PDF file: extract text, chunk, embed, index.
-
-        Args:
-            file_path: Path to the PDF file.
-            metadata: Optional metadata to attach to all chunks.
-
-        Returns:
-            Dict with document_id and num_chunks.
-        """
+        """Ingest a PDF file: extract text + tables, chunk, embed, index."""
         metadata = metadata or {}
         path = Path(file_path)
         doc_id = self._generate_doc_id(path)
 
         log.info("ingesting_document", file=path.name, doc_id=doc_id)
 
-        # 1. Extract text from PDF
-        pages = self._extract_text(path)
+        # 1. Extract text and tables from PDF
+        pages = self._extract_text_and_tables(path)
         log.info("extracted_pages", file=path.name, num_pages=len(pages))
 
         # 2. Chunk each page
@@ -182,8 +173,68 @@ class DocumentIngestor:
 
         return {"document_id": doc_id, "num_chunks": len(all_chunks)}
 
+    def _extract_text_and_tables(self, path: Path) -> list[str]:
+        """Extract text from each page, including formatted tables.
+
+        Uses both text extraction and table extraction to capture
+        all content, especially numerical data in tables that
+        regular text extraction might miss.
+        """
+        pages = []
+        with pdfplumber.open(str(path)) as pdf:
+            for page in pdf.pages:
+                parts = []
+
+                # Extract main text
+                text = page.extract_text() or ""
+                if text.strip():
+                    parts.append(text)
+
+                # Extract tables separately and format them
+                tables = page.extract_tables()
+                for table in tables:
+                    formatted = self._format_table(table)
+                    if formatted:
+                        parts.append(formatted)
+
+                pages.append("\n\n".join(parts))
+
+        return pages
+
+    def _format_table(self, table: list[list[str | None]]) -> str:
+        """Format an extracted table into readable text.
+
+        Converts table rows into a pipe-delimited format
+        that preserves the structure for the LLM to read.
+        """
+        if not table:
+            return ""
+
+        formatted_rows = []
+        for row in table:
+            if row is None:
+                continue
+            # Clean cells
+            cells = []
+            for cell in row:
+                if cell is None:
+                    cells.append("")
+                else:
+                    cells.append(str(cell).strip())
+
+            # Skip rows that are all empty
+            if not any(cells):
+                continue
+
+            formatted_rows.append(" | ".join(cells))
+
+        if not formatted_rows:
+            return ""
+
+        return "Table data:\n" + "\n".join(formatted_rows)
+
     def _extract_text(self, path: Path) -> list[str]:
-        """Extract text from each page of a PDF."""
+        """Legacy: Extract text from each page of a PDF."""
         pages = []
         with pdfplumber.open(str(path)) as pdf:
             for page in pdf.pages:

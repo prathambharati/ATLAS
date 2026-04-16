@@ -1,8 +1,9 @@
-"""Evaluator module — hallucination detection via NLI + confidence scoring."""
+"""Evaluator module — hallucination detection + self-correction."""
 
 from atlas.evaluator.confidence import ConfidenceScorer, EvaluationReport
 from atlas.evaluator.evaluator import HallucinationEvaluator
 from atlas.evaluator.grounding import GroundingResult, GroundingScorer
+from atlas.evaluator.self_corrector import SelfCorrector
 
 __all__ = [
     "HallucinationEvaluator",
@@ -10,4 +11,5 @@ __all__ = [
     "EvaluationReport",
     "GroundingScorer",
     "GroundingResult",
+    "SelfCorrector",
 ]

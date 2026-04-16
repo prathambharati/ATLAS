@@ -248,6 +248,7 @@ class AgentOrchestrator:
                     "tool": tool_name,
                     "query": tool_args.get("query", ""),
                     "result_preview": tool_result[:200],
+                    "full_text": tool_result,
                 })
 
                 # Add to trace

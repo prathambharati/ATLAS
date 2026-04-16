@@ -8,7 +8,7 @@ DECOMPOSER_SYSTEM_PROMPT = """Your job is to decompose complex research question
 focused sub-questions that can be answered independently or in sequence.
 
 Rules:
-1. Break the query into 2-6 sub-tasks (no more than 6).
+1. Break the query into 2-3 sub-tasks (no more than 3).
 2. Each sub-task should be a focused, answerable question.
 3. Identify dependencies: if answering task B requires the result of task A, mark it.
 4. Tasks with no dependencies can be executed in parallel.

@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 4096
 
     # --- Retrieval Config ---
-    chunk_size: int = 512
+    chunk_size: int = 1024
     chunk_overlap: int = 50
     top_k_retrieval: int = 10
     top_k_rerank: int = 5

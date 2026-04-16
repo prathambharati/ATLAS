@@ -29,17 +29,19 @@ class GroundingResult:
 
     claim: str
     label: str  # "entailment", "contradiction", or "neutral"
-    score: float  # Confidence in the label (0.0 - 1.0)
+    score: float  # Entailment probability (0.0 - 1.0)
     evidence: str  # The evidence chunk that was checked
-    evidence_source: str  # Source of the evidence (filename, URL, etc.)
+    evidence_source: str  # Source of the evidence
 
     @property
     def is_supported(self) -> bool:
+        """Claim is supported if label is entailment AND score >= threshold."""
         return self.label == "entailment" and self.score >= 0.5
 
     @property
     def is_contradicted(self) -> bool:
-        return self.label == "contradiction" and self.score >= 0.5
+        """Claim is contradicted if label is contradiction."""
+        return self.label == "contradiction"
 
     def to_dict(self) -> dict:
         return {
@@ -53,17 +55,7 @@ class GroundingResult:
 
 
 class GroundingScorer:
-    """Score claims against evidence using NLI entailment.
-
-    For each (claim, evidence_chunk) pair, the NLI model produces
-    probabilities for:
-    - entailment: evidence supports the claim
-    - contradiction: evidence contradicts the claim
-    - neutral: evidence doesn't address the claim
-
-    We check each claim against ALL evidence chunks and take
-    the best entailment score.
-    """
+    """Score claims against evidence using NLI entailment."""
 
     def __init__(self, model_name: str = "facebook/bart-large-mnli"):
         log.info("loading_nli_model", model=model_name)
@@ -75,15 +67,7 @@ class GroundingScorer:
         log.info("nli_model_ready", model=model_name)
 
     def _score_pair(self, premise: str, hypothesis: str) -> dict:
-        """Score a single (premise, hypothesis) pair with NLI.
-
-        Args:
-            premise: The evidence text.
-            hypothesis: The claim to verify.
-
-        Returns:
-            Dict with entailment, contradiction, neutral scores.
-        """
+        """Score a single (premise, hypothesis) pair with NLI."""
         inputs = self._tokenizer(
             premise,
             hypothesis,
@@ -110,15 +94,8 @@ class GroundingScorer:
     ) -> GroundingResult:
         """Score a single claim against multiple evidence chunks.
 
-        Checks the claim against each chunk and returns the result
-        with the highest entailment score.
-
-        Args:
-            claim: The factual claim to verify.
-            evidence_chunks: List of dicts with 'text' and 'source' keys.
-
-        Returns:
-            GroundingResult with the best evidence match.
+        Uses a two-key ranking: first prefer chunks where entailment
+        is the dominant label, then rank by entailment score.
         """
         if not evidence_chunks:
             return GroundingResult(
@@ -130,9 +107,6 @@ class GroundingScorer:
             )
 
         best_result = None
-        # Track by (entailment_is_dominant, entailment_score) so chunks
-        # where entailment IS the top label are always preferred over
-        # chunks where contradiction/neutral dominates.
         best_key = (False, -1.0)
 
         for chunk in evidence_chunks:
@@ -142,7 +116,6 @@ class GroundingScorer:
             if not text.strip():
                 continue
 
-            # Truncate long evidence
             truncated = text[:512]
 
             try:
@@ -152,9 +125,8 @@ class GroundingScorer:
 
                 entailment_score = scores["entailment"]
                 top_label = max(scores, key=scores.get)
-                top_score = scores[top_label]
 
-                # Prefer chunks where entailment is the dominant label,
+                # Prefer chunks where entailment is dominant,
                 # then by entailment score as tiebreaker
                 key = (top_label == "entailment", entailment_score)
 
@@ -164,7 +136,7 @@ class GroundingScorer:
                     best_result = GroundingResult(
                         claim=claim,
                         label=top_label,
-                        score=round(top_score, 4),
+                        score=round(entailment_score, 4),
                         evidence=text,
                         evidence_source=source,
                     )
@@ -193,15 +165,7 @@ class GroundingScorer:
         claims: list[str],
         evidence_chunks: list[dict],
     ) -> list[GroundingResult]:
-        """Score multiple claims against evidence.
-
-        Args:
-            claims: List of factual claims.
-            evidence_chunks: List of dicts with 'text' and 'source' keys.
-
-        Returns:
-            List of GroundingResult, one per claim.
-        """
+        """Score multiple claims against evidence."""
         results = []
         for claim in claims:
             result = self.score_claim(claim, evidence_chunks)

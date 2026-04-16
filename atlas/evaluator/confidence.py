@@ -1,10 +1,4 @@
-"""Confidence scoring — aggregate claim-level grounding into overall scores.
-
-Takes the individual GroundingResults and produces:
-- Per-claim scores (supported / unsupported / contradicted)
-- Overall confidence for the entire response
-- A structured evaluation report
-"""
+"""Confidence scoring — aggregate claim-level grounding into overall scores."""
 
 from __future__ import annotations
 
@@ -42,25 +36,13 @@ class ConfidenceScorer:
     """Aggregate claim-level grounding scores into overall confidence."""
 
     def __init__(self, support_threshold: float = 0.5):
-        """
-        Args:
-            support_threshold: Minimum entailment score to consider
-                               a claim as "supported". Default 0.5.
-        """
         self.support_threshold = support_threshold
 
     def evaluate(
         self,
         grounding_results: list[GroundingResult],
     ) -> EvaluationReport:
-        """Produce an evaluation report from grounding results.
-
-        Args:
-            grounding_results: List of GroundingResult from the scorer.
-
-        Returns:
-            EvaluationReport with counts and overall confidence.
-        """
+        """Produce an evaluation report from grounding results."""
         if not grounding_results:
             return EvaluationReport()
 
@@ -70,12 +52,14 @@ class ConfidenceScorer:
         claim_details = []
 
         for result in grounding_results:
-            if result.is_supported:
-                supported += 1
-                status = "supported"
-            elif result.is_contradicted:
+            # Check contradicted FIRST — a contradiction should never
+            # be counted as supported even if score is high
+            if result.is_contradicted:
                 contradicted += 1
                 status = "contradicted"
+            elif result.is_supported:
+                supported += 1
+                status = "supported"
             else:
                 unsupported += 1
                 status = "unsupported"

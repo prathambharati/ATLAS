@@ -48,9 +48,10 @@ def build_default_tools(
     registry.register(
         name="retrieve",
         description=(
-            "Search through ingested PDF documents using hybrid retrieval "
-            "(dense + BM25 + re-ranking). Use this when the answer might "
-            "be in documents that have been uploaded."
+            "Search through ingested PDF documents using hybrid retrieval. "
+            "THIS IS THE PRIMARY TOOL — always use this FIRST before web search. "
+            "If the user has uploaded documents, the answer is likely here. "
+            "Uses dense + BM25 + cross-encoder re-ranking for high precision."
         ),
         parameters={
             "type": "object",

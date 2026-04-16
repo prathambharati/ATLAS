@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATLAS — Autonomous Research Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        atlas: {
+                            bg: '#0b0d14',
+                            card: '#12151f',
+                            card2: '#181c2a',
+                            border: '#232738',
+                            accent: '#6366f1',
+                            accent2: '#8b5cf6',
+                            text: '#e2e8f0',
+                            muted: '#64748b',
+                            green: '#22c55e',
+                            yellow: '#eab308',
+                            red: '#ef4444',
+                            blue: '#3b82f6',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #0b0d14; font-family: 'Inter', system-ui, sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        .glow { box-shadow: 0 0 30px rgba(99, 102, 241, 0.1); }
+        .glow-border { border: 1px solid rgba(99, 102, 241, 0.3); }
+
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        .pulse-ring { animation: pulseRing 2s ease-out infinite; }
+        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
+
+        .confidence-bar { transition: width 1s ease-out; }
+
+        .report-content h1 { font-size: 1.4rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #e2e8f0; }
+        .report-content h2 { font-size: 1.2rem; font-weight: 600; margin: 1.2rem 0 0.5rem; color: #c4b5fd; border-bottom: 1px solid #232738; padding-bottom: 0.4rem; }
+        .report-content h3 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 0.4rem; color: #a5b4fc; }
+        .report-content p { margin: 0.5rem 0; line-height: 1.75; color: #cbd5e1; font-size: 0.925rem; }
+        .report-content ul, .report-content ol { margin: 0.5rem 0 0.5rem 1.5rem; color: #cbd5e1; }
+        .report-content li { margin: 0.3rem 0; line-height: 1.7; font-size: 0.925rem; }
+        .report-content strong { color: #e2e8f0; }
+        .report-content em { color: #a5b4fc; font-style: italic; }
+        .report-content table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.85rem; }
+        .report-content th { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 2px solid #6366f1; color: #c4b5fd; }
+        .report-content td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #232738; color: #cbd5e1; }
+        .report-content hr { border-color: #232738; margin: 1.2rem 0; }
+        .report-content code { background: #232738; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; }
+
+        .drop-zone { border: 2px dashed #232738; transition: all 0.2s; }
+        .drop-zone.dragover { border-color: #6366f1; background: rgba(99, 102, 241, 0.05); }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #232738; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-atlas-text min-h-screen">
+
+    <!-- Header -->
+    <header class="border-b border-atlas-border sticky top-0 bg-atlas-bg/90 backdrop-blur-md z-50">
+        <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-atlas-accent to-atlas-accent2 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-atlas-accent/20">A</div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">ATLAS</h1>
+                    <p class="text-[10px] text-atlas-muted leading-tight">Autonomous Research Agent</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-5">
+                <div id="doc-count" class="text-xs text-atlas-muted hidden">
+                    <span class="text-atlas-accent font-medium" id="doc-count-num">0</span> docs ingested
+                </div>
+                <div id="status-indicator" class="flex items-center gap-2 text-xs text-atlas-muted">
+                    <div class="w-2 h-2 rounded-full bg-atlas-green"></div>
+                    Ready
+                </div>
+                <a href="/docs" target="_blank" class="text-xs text-atlas-muted hover:text-atlas-accent transition">API</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-6">
+
+        <!-- Search Section -->
+        <div class="mb-6">
+            <div class="bg-atlas-card border border-atlas-border rounded-2xl p-5 glow">
+                <div class="flex gap-3">
+                    <input
+                        id="query-input"
+                        type="text"
+                        placeholder="Ask a research question..."
+                        class="flex-1 bg-atlas-bg border border-atlas-border rounded-xl px-4 py-3 text-sm text-atlas-text placeholder-atlas-muted/50 focus:outline-none focus:border-atlas-accent/50 transition"
+                        onkeydown="if(event.key==='Enter') runResearch()"
+                    />
+                    <button
+                        id="run-btn"
+                        onclick="runResearch()"
+                        class="px-5 py-3 bg-gradient-to-r from-atlas-accent to-atlas-accent2 text-white text-sm font-medium rounded-xl hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-atlas-accent/20"
+                    >
+                        Research
+                    </button>
+                </div>
+
+                <!-- Quick Examples + Upload -->
+                <div class="flex items-center justify-between mt-3">
+                    <div class="flex gap-3 flex-wrap">
+                        <button onclick="setQuery('What is the attention mechanism in transformers?')" class="text-[11px] text-atlas-muted hover:text-atlas-accent transition px-2 py-1 rounded-md hover:bg-atlas-accent/5">Attention mechanism</button>
+                        <button onclick="setQuery('Compare BERT and GPT architectures')" class="text-[11px] text-atlas-muted hover:text-atlas-accent transition px-2 py-1 rounded-md hover:bg-atlas-accent/5">BERT vs GPT</button>
+                        <button onclick="setQuery('Explain speculative decoding for LLM inference')" class="text-[11px] text-atlas-muted hover:text-atlas-accent transition px-2 py-1 rounded-md hover:bg-atlas-accent/5">Speculative decoding</button>
+                        <button onclick="setQuery('What are the tradeoffs between LoRA and full fine-tuning?')" class="text-[11px] text-atlas-muted hover:text-atlas-accent transition px-2 py-1 rounded-md hover:bg-atlas-accent/5">LoRA vs fine-tuning</button>
+                    </div>
+                    <label class="text-[11px] text-atlas-muted hover:text-atlas-accent transition cursor-pointer flex items-center gap-1 px-2 py-1 rounded-md hover:bg-atlas-accent/5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        Upload PDF
+                        <input type="file" accept=".pdf" class="hidden" onchange="uploadPDF(this.files[0])" />
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Upload Banner -->
+        <div id="upload-banner" class="hidden mb-4 fade-in">
+            <div class="bg-atlas-accent/10 border border-atlas-accent/20 rounded-xl px-4 py-3 flex items-center gap-3 text-sm">
+                <svg class="w-5 h-5 text-atlas-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="upload-message" class="text-atlas-text"></span>
+                <button onclick="this.parentElement.parentElement.classList.add('hidden')" class="ml-auto text-atlas-muted hover:text-atlas-text">✕</button>
+            </div>
+        </div>
+
+        <!-- Live Agent Trace (appears during research) -->
+        <div id="live-trace" class="hidden mb-6 fade-in">
+            <div class="bg-atlas-card border border-atlas-border rounded-2xl overflow-hidden">
+                <div class="px-5 py-3 border-b border-atlas-border flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-atlas-accent pulse-ring"></div>
+                    <span class="text-sm font-medium">Agent Activity</span>
+                </div>
+                <div id="trace-steps" class="px-5 py-3 space-y-2 max-h-64 overflow-y-auto font-mono text-xs">
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results" class="hidden space-y-5 fade-in">
+
+            <!-- Confidence + Metrics Row -->
+            <div class="grid grid-cols-12 gap-4">
+                <!-- Confidence Gauge -->
+                <div id="confidence-card" class="col-span-4 bg-atlas-card border border-atlas-border rounded-2xl p-5 hidden">
+                    <div class="text-xs text-atlas-muted mb-2">Groundedness Score</div>
+                    <div class="flex items-end gap-2 mb-3">
+                        <span id="confidence-value" class="text-4xl font-bold text-atlas-green">—</span>
+                        <span class="text-sm text-atlas-muted mb-1">%</span>
+                    </div>
+                    <div class="w-full bg-atlas-bg rounded-full h-2 mb-3">
+                        <div id="confidence-bar" class="confidence-bar h-2 rounded-full bg-atlas-green" style="width: 0%"></div>
+                    </div>
+                    <div id="claim-counts" class="grid grid-cols-3 gap-2 text-center text-[10px]">
+                    </div>
+                </div>
+
+                <!-- Metrics -->
+                <div id="metrics-grid" class="col-span-8 grid grid-cols-4 gap-3">
+                </div>
+            </div>
+
+            <!-- Grounding Analysis -->
+            <div id="grounding-section" class="hidden bg-atlas-card border border-atlas-border rounded-2xl overflow-hidden">
+                <button onclick="toggleSection('grounding-body')" class="w-full px-5 py-3 border-b border-atlas-border flex items-center justify-between hover:bg-atlas-card2/50 transition">
+                    <span class="text-sm font-medium">Claim-Level Grounding Analysis</span>
+                    <svg class="w-4 h-4 text-atlas-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="grounding-body" class="px-5 py-3 space-y-2">
+                </div>
+            </div>
+
+            <!-- Report -->
+            <div class="bg-atlas-card border border-atlas-border rounded-2xl overflow-hidden">
+                <div class="px-5 py-3 border-b border-atlas-border flex items-center justify-between">
+                    <span class="text-sm font-medium">Research Report</span>
+                    <button onclick="copyReport()" id="copy-btn" class="text-xs text-atlas-muted hover:text-atlas-accent transition flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <div id="report-content" class="report-content px-5 py-4"></div>
+            </div>
+
+            <!-- Sources -->
+            <div class="bg-atlas-card border border-atlas-border rounded-2xl overflow-hidden">
+                <button onclick="toggleSection('sources-body')" class="w-full px-5 py-3 border-b border-atlas-border flex items-center justify-between hover:bg-atlas-card2/50 transition">
+                    <span class="text-sm font-medium">Sources</span>
+                    <span id="source-count" class="text-xs text-atlas-muted"></span>
+                </button>
+                <div id="sources-body" class="px-5 py-3 space-y-2"></div>
+            </div>
+
+            <!-- Raw Trace -->
+            <div class="bg-atlas-card border border-atlas-border rounded-2xl overflow-hidden">
+                <button onclick="toggleSection('raw-trace')" class="w-full px-5 py-3 flex items-center justify-between hover:bg-atlas-card2/50 transition">
+                    <span class="text-sm font-medium text-atlas-muted">Raw Agent Trace</span>
+                    <svg class="w-4 h-4 text-atlas-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="raw-trace" class="hidden px-5 pb-4">
+                    <pre id="trace-json" class="text-[11px] text-atlas-muted overflow-x-auto font-mono leading-relaxed"></pre>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-atlas-border mt-12">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between text-xs text-atlas-muted">
+            <span>ATLAS v0.1.0 — Built by Pratham Bharati</span>
+            <span>MS Applied Machine Learning @ UMD</span>
+        </div>
+    </footer>
+
+    <script>
+        const API = '';
+        let currentReport = '';
+        let docCount = 0;
+
+        function setQuery(q) {
+            document.getElementById('query-input').value = q;
+        }
+
+        function updateStatus(text, color) {
+            const el = document.getElementById('status-indicator');
+            const colors = { green: 'bg-atlas-green', yellow: 'bg-atlas-yellow', red: 'bg-atlas-red', blue: 'bg-atlas-blue' };
+            el.innerHTML = `<div class="w-2 h-2 rounded-full ${colors[color] || colors.green}"></div>${text}`;
+        }
+
+        // --- PDF Upload ---
+        async function uploadPDF(file) {
+            if (!file) return;
+            updateStatus('Uploading...', 'yellow');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(`${API}/api/v1/upload`, { method: 'POST', body: formData });
+                if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+                const data = await res.json();
+
+                docCount++;
+                document.getElementById('doc-count').classList.remove('hidden');
+                document.getElementById('doc-count-num').textContent = docCount;
+
+                const banner = document.getElementById('upload-banner');
+                banner.classList.remove('hidden');
+                document.getElementById('upload-message').textContent =
+                    `${data.filename} ingested — ${data.num_chunks} chunks indexed. You can now research against it.`;
+
+                updateStatus('Ready', 'green');
+            } catch (e) {
+                alert(`Upload failed: ${e.message}`);
+                updateStatus('Error', 'red');
+            }
+        }
+
+        // --- Streaming Research ---
+        async function runResearch() {
+            const query = document.getElementById('query-input').value.trim();
+            if (!query) return;
+
+            const btn = document.getElementById('run-btn');
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('live-trace').classList.remove('hidden');
+            document.getElementById('trace-steps').innerHTML = '';
+
+            updateStatus('Researching...', 'blue');
+            addTraceStep('Starting research...', 'info');
+
+            try {
+                const res = await fetch(`${API}/api/v1/research/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, max_steps: 10 }),
+                });
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const event = JSON.parse(line.slice(6));
+                                handleStreamEvent(event);
+                            } catch (e) { /* skip parse errors */ }
+                        }
+                    }
+                }
+
+                updateStatus('Ready', 'green');
+            } catch (e) {
+                addTraceStep(`Error: ${e.message}`, 'error');
+                updateStatus('Error', 'red');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Research';
+            }
+        }
+
+        function handleStreamEvent(event) {
+            switch (event.type) {
+                case 'status':
+                    addTraceStep(event.message, 'info');
+                    break;
+
+                case 'plan':
+                    addTraceStep(event.message, 'plan');
+                    if (event.tasks) {
+                        event.tasks.forEach(t => {
+                            addTraceStep(`  Sub-task: ${t.query}`, 'subtask');
+                        });
+                    }
+                    break;
+
+                case 'task_start':
+                    addTraceStep(`▶ ${event.message}`, 'running');
+                    break;
+
+                case 'task_done':
+                    addTraceStep(`✓ ${event.message}`, 'done');
+                    break;
+
+                case 'evaluation':
+                    addTraceStep(`Grounding: ${(event.confidence * 100).toFixed(0)}% confident`, 'eval');
+                    displayConfidence(event);
+                    break;
+                
+                case 'correction':
+                    addTraceStep(`🔄 Self-correction: ${event.message}`, 'eval');
+                    if (event.cycles) {
+                        event.cycles.forEach(c => {
+                            addTraceStep(
+                                `  Cycle ${c.cycle}: ${(c.before.confidence*100).toFixed(0)}% → ${(c.after.confidence*100).toFixed(0)}% (+${(c.improvement*100).toFixed(0)}%)`,
+                                'done'
+                            );
+                        });
+                    }
+                    break;
+
+                case 'cost':
+                    break;
+                
+                case 'complete':
+                    addTraceStep('Research complete!', 'complete');
+                    displayFullResults(event);
+                    break;
+
+                case 'error':
+                    addTraceStep(`Error: ${event.message}`, 'error');
+                    break;
+            }
+        }
+
+        function addTraceStep(text, type) {
+            const container = document.getElementById('trace-steps');
+            const colors = {
+                info: 'text-atlas-muted',
+                plan: 'text-atlas-accent',
+                subtask: 'text-atlas-accent/60',
+                running: 'text-atlas-yellow',
+                done: 'text-atlas-green',
+                eval: 'text-purple-400',
+                complete: 'text-atlas-green font-medium',
+                error: 'text-atlas-red',
+            };
+            const el = document.createElement('div');
+            el.className = `slide-in ${colors[type] || 'text-atlas-muted'}`;
+            el.textContent = `${new Date().toLocaleTimeString()} │ ${text}`;
+            container.appendChild(el);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // --- Display Results ---
+        function displayFullResults(event) {
+            document.getElementById('results').classList.remove('hidden');
+
+            // Report
+            currentReport = event.report || '';
+            document.getElementById('report-content').innerHTML = markdownToHtml(currentReport);
+
+            // Sources
+            const sources = event.sources || [];
+            displaySources(sources);
+
+            // Metrics
+            displayMetrics(sources);
+
+            // Trace
+            if (event.trace_id) fetchTrace(event.trace_id);
+            // Cost
+            if (event.cost) {
+                const costEl = document.createElement('div');
+                costEl.className = 'bg-atlas-card border border-atlas-border rounded-xl p-4 col-span-4 mt-3 text-xs text-atlas-muted';
+                costEl.innerHTML = `💰 Cost: $${event.cost.cost_usd.toFixed(4)} | Tokens: ${event.cost.total_tokens.toLocaleString()} (${event.cost.tokens_in.toLocaleString()} in / ${event.cost.tokens_out.toLocaleString()} out) | Model: ${event.cost.model}`;
+                document.getElementById('metrics-grid').appendChild(costEl);
+            }
+        }
+
+        function displayConfidence(evalData) {
+            const card = document.getElementById('confidence-card');
+            card.classList.remove('hidden');
+
+            const conf = Math.round((evalData.confidence || 0) * 100);
+            const color = conf >= 80 ? 'text-atlas-green' : conf >= 50 ? 'text-atlas-yellow' : 'text-atlas-red';
+            const barColor = conf >= 80 ? 'bg-atlas-green' : conf >= 50 ? 'bg-atlas-yellow' : 'bg-atlas-red';
+
+            document.getElementById('confidence-value').className = `text-4xl font-bold ${color}`;
+            document.getElementById('confidence-value').textContent = conf;
+
+            const bar = document.getElementById('confidence-bar');
+            bar.className = `confidence-bar h-2 rounded-full ${barColor}`;
+            setTimeout(() => bar.style.width = `${conf}%`, 100);
+
+            document.getElementById('claim-counts').innerHTML = `
+                <div class="bg-atlas-green/10 rounded-lg py-1.5">
+                    <div class="text-atlas-green font-bold text-sm">${evalData.supported || 0}</div>
+                    <div class="text-atlas-muted mt-0.5">Supported</div>
+                </div>
+                <div class="bg-atlas-yellow/10 rounded-lg py-1.5">
+                    <div class="text-atlas-yellow font-bold text-sm">${evalData.unsupported || 0}</div>
+                    <div class="text-atlas-muted mt-0.5">Unsupported</div>
+                </div>
+                <div class="bg-atlas-red/10 rounded-lg py-1.5">
+                    <div class="text-atlas-red font-bold text-sm">${evalData.contradicted || 0}</div>
+                    <div class="text-atlas-muted mt-0.5">Contradicted</div>
+                </div>
+            `;
+
+            // Grounding analysis
+            if (evalData.claims && evalData.claims.length > 0) {
+                const section = document.getElementById('grounding-section');
+                section.classList.remove('hidden');
+                const body = document.getElementById('grounding-body');
+
+                body.innerHTML = evalData.claims.map((c, i) => {
+                    const statusMap = {
+                        supported: { icon: '✅', color: 'border-atlas-green/30 bg-atlas-green/5', badge: 'bg-atlas-green/20 text-atlas-green' },
+                        unsupported: { icon: '⚠️', color: 'border-atlas-yellow/30 bg-atlas-yellow/5', badge: 'bg-atlas-yellow/20 text-atlas-yellow' },
+                        contradicted: { icon: '❌', color: 'border-atlas-red/30 bg-atlas-red/5', badge: 'bg-atlas-red/20 text-atlas-red' },
+                    };
+                    const s = statusMap[c.status] || statusMap.unsupported;
+                    return `
+                        <div class="border ${s.color} rounded-lg p-3 text-sm">
+                            <div class="flex items-start gap-2">
+                                <span>${s.icon}</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-atlas-text">${c.claim}</div>
+                                    <div class="flex items-center gap-2 mt-1.5">
+                                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded ${s.badge}">${c.status.toUpperCase()}</span>
+                                        <span class="text-[10px] text-atlas-muted">Score: ${(c.score || 0).toFixed(2)}</span>
+                                        <span class="text-[10px] text-atlas-muted">Source: ${c.evidence_source || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function displayMetrics(sources) {
+            const grid = document.getElementById('metrics-grid');
+            const tools = {};
+            sources.forEach(s => { tools[s.tool] = (tools[s.tool] || 0) + 1; });
+
+            const metrics = [
+                { label: 'Total Sources', value: sources.length, icon: '📚' },
+                { label: 'Arxiv Papers', value: tools['arxiv_search'] || 0, icon: '📄' },
+                { label: 'Web Results', value: tools['web_search'] || 0, icon: '🌐' },
+                { label: 'Doc Retrievals', value: tools['retrieve'] || 0, icon: '🔍' },
+            ];
+
+            grid.innerHTML = metrics.map(m => `
+                <div class="bg-atlas-card border border-atlas-border rounded-xl p-4">
+                    <div class="text-lg mb-0.5">${m.icon}</div>
+                    <div class="text-2xl font-bold text-atlas-text">${m.value}</div>
+                    <div class="text-[10px] text-atlas-muted mt-0.5">${m.label}</div>
+                </div>
+            `).join('');
+        }
+
+        function displaySources(sources) {
+            const body = document.getElementById('sources-body');
+            document.getElementById('source-count').textContent = `${sources.length} sources`;
+
+            const seen = new Set();
+            const unique = sources.filter(s => {
+                const k = `${s.tool}:${s.query}`;
+                if (seen.has(k)) return false;
+                seen.add(k);
+                return true;
+            });
+
+            body.innerHTML = unique.map(s => {
+                const colors = {
+                    'arxiv_search': 'bg-purple-500/15 text-purple-400 border-purple-500/20',
+                    'web_search': 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+                    'retrieve': 'bg-green-500/15 text-green-400 border-green-500/20',
+                    'calculator': 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
+                };
+                const c = colors[s.tool] || 'bg-gray-500/15 text-gray-400 border-gray-500/20';
+                const preview = (s.result_preview || '').slice(0, 120);
+                return `
+                    <div class="flex gap-3 items-start py-1">
+                        <span class="text-[10px] font-medium px-2 py-0.5 rounded border ${c} whitespace-nowrap mt-0.5">${s.tool}</span>
+                        <div class="min-w-0">
+                            <div class="text-xs font-medium text-atlas-text">${s.query || ''}</div>
+                            <div class="text-[11px] text-atlas-muted mt-0.5 line-clamp-2">${preview}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function fetchTrace(traceId) {
+            try {
+                const res = await fetch(`${API}/api/v1/traces/${traceId}`);
+                const data = await res.json();
+                document.getElementById('trace-json').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('trace-json').textContent = 'Failed to load trace.';
+            }
+        }
+
+        function toggleSection(id) {
+            document.getElementById(id).classList.toggle('hidden');
+        }
+
+        function copyReport() {
+            navigator.clipboard.writeText(currentReport).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.innerHTML = '<span class="text-atlas-green text-xs">Copied!</span>';
+                setTimeout(() => {
+                    btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>Copy';
+                }, 1500);
+            });
+        }
+
+        function markdownToHtml(md) {
+            if (!md) return '<p class="text-atlas-muted">No report generated.</p>';
+            return md
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>')
+                .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+                .replace(/^- (.*$)/gm, '<li>$1</li>')
+                .replace(/\|([^\n]+)\|/g, (m) => {
+                    const cells = m.split('|').filter(c => c.trim()).map(c => c.trim());
+                    if (cells.every(c => /^[-:]+$/.test(c))) return '';
+                    return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+                })
+                .replace(/(<tr>.*<\/tr>\s*)+/g, '<table class="w-full">$&</table>')
+                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                .replace(/^---$/gm, '<hr>')
+                .replace(/\n{2,}/g, '</p><p>')
+                .replace(/^(?!<)/, '<p>')
+                .replace(/(?!>)$/, '</p>');
+        }
+    </script>
+</body>
+</html>
