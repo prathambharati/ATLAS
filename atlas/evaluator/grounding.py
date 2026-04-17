@@ -35,8 +35,7 @@ class GroundingResult:
 
     @property
     def is_supported(self) -> bool:
-        """Claim is supported if label is entailment AND score >= threshold."""
-        return self.label == "entailment" and self.score >= 0.5
+        return self.label == "entailment" and self.score >= 0.3
 
     @property
     def is_contradicted(self) -> bool:

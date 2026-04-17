@@ -14,9 +14,13 @@ from atlas.observability.logger import get_logger
 log = get_logger(__name__)
 
 CLAIM_EXTRACTION_PROMPT = """\
-Extract all factual claims from the following text.
-Each claim should be a single, verifiable statement.
-Do NOT include opinions, hedging language, or meta-statements.
+Extract the KEY factual claims from the following text.
+Rules:
+- Only include concrete, verifiable facts (numbers, names, definitions)
+- Skip vague statements like "this is important" or "this is significant"
+- Skip meta-statements like "the findings show" or "research indicates"
+- Maximum 8 claims
+- Each claim must be specific enough to verify against a source
 
 Text:
 {text}

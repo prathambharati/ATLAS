@@ -55,10 +55,10 @@ def evaluate_answer(
     """Run hallucination evaluation on an answer."""
     evidence_chunks = []
     for source in sources:
-        preview = source.get("result_preview", "")
-        if preview and "Error" not in preview:
+        text = source.get("full_text", source.get("result_preview", ""))
+        if text and "Error" not in text:
             evidence_chunks.append({
-                "text": preview,
+                "text": text[:1000],
                 "source": source.get("tool", "unknown"),
             })
 
