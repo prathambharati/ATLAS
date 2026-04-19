@@ -47,7 +47,7 @@ class TestGroundingResult:
         result = GroundingResult(
             claim="Some claim",
             label="entailment",
-            score=0.3,
+            score=0.2,
             evidence="Some evidence",
             evidence_source="test",
         )
